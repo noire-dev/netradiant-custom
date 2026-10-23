@@ -31,7 +31,16 @@
 /* dependencies */
 #include "q3map2.h"
 
+static const int Q3MAP2_SURF_SKYBOX            = 0x20000000;  /* _skybox surfaces */
 
+static int EmitSkyboxAwareShader( const mapDrawSurface_t& ds, const int* contentFlagsIn, const int* surfaceFlagsIn ){
+    int contentFlags = contentFlagsIn ? *contentFlagsIn : ds.shaderInfo->contentFlags;
+    int surfaceFlags = surfaceFlagsIn ? *surfaceFlagsIn : ds.shaderInfo->surfaceFlags;
+
+    if ( ds.skyboxGenerated ) surfaceFlags |= Q3MAP2_SURF_SKYBOX;
+
+    return EmitShader( ds.shaderInfo->shader, &contentFlags, &surfaceFlags );
+}
 
 /*
    AllocDrawSurface()
@@ -169,6 +178,10 @@ static void MakeCelSurface( const mapDrawSurface_t& src, shaderInfo_t& si ){
 static void MakeSkyboxSurface( mapDrawSurface_t& src ){
 	/* make a copy */
 	mapDrawSurface_t& ds = CloneSurface( src, *src.shaderInfo );
+
+	/* set _skybox surf flag */
+	ds.skyboxGenerated = true;
+	ds.skybox          = true;
 
 	/* set parent */
 	ds.parent = &src;
@@ -2063,10 +2076,10 @@ static void EmitPatchSurface( const entity_t& e, mapDrawSurface_t& ds ){
 		ds.sampleSize = 0;
 
 		/* emit the new fake shader */
-		out.shaderNum = EmitShader( ds.shaderInfo->shader, &contentFlags, &surfaceFlags );
+		out.shaderNum = EmitSkyboxAwareShader( ds, &contentFlags, &surfaceFlags );
 	}
 	else{
-		out.shaderNum = EmitShader( ds.shaderInfo->shader, &ds.shaderInfo->contentFlags, &ds.shaderInfo->surfaceFlags );
+		out.shaderNum = EmitSkyboxAwareShader( ds, &ds.shaderInfo->contentFlags, &ds.shaderInfo->surfaceFlags );
 	}
 	out.patchWidth = ds.patchWidth;
 	out.patchHeight = ds.patchHeight;
@@ -2346,7 +2359,7 @@ static void EmitTriangleSurface( mapDrawSurface_t& ds ){
 		out.shaderNum = EmitShader( "debugsurfaces", nullptr, nullptr );
 	}
 	else{
-		out.shaderNum = EmitShader( ds.shaderInfo->shader, &ds.shaderInfo->contentFlags, &ds.shaderInfo->surfaceFlags );
+		out.shaderNum = EmitSkyboxAwareShader( ds, &ds.shaderInfo->contentFlags, &ds.shaderInfo->surfaceFlags );
 	}
 	out.patchWidth = ds.patchWidth;
 	out.patchHeight = ds.patchHeight;

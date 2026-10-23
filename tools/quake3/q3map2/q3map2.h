@@ -921,6 +921,7 @@ struct mapDrawSurface_t_params
 
 	bool fur;                               /* ydnar: this is kind of a hack, but hey... */
 	bool skybox;                            /* ydnar: yet another fun hack */
+	bool skyboxGenerated = false;			/* noire: tag the skybox surfs */
 	bool backSide;                          /* ydnar: q3map_backShader support */
 
 	class mapDrawSurface_t *parent;        /* ydnar: for cloned (skybox) surfaces to share lighting data */
