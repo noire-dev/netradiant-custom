@@ -1778,6 +1778,7 @@ void                        SetDefaultAmbientColor( const Vector3& color );
 void                        SetSurfaceExtra( const mapDrawSurface_t& ds );
 void                        WriteSurfaceExtraFile( const char *path );
 void                        LoadSurfaceExtraFile( const char *path );
+void                        RemapSurfaceExtras( const std::vector<int>& remap );
 
 
 /* decals.c */
