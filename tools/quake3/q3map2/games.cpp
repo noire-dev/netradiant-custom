@@ -64,26 +64,19 @@ struct game_default : game_t
 	static const int Q_SURF_NODAMAGE            = 0x1;         /* never give falling damage */
 	static const int Q_SURF_SLICK               = 0x2;         /* effects game physics: zero friction on this */
 	static const int Q_SURF_SKY                 = 0x4;         /* lighting from environment map */
-	static const int Q_SURF_LADDER              = 0x8;
-	static const int Q_SURF_NOIMPACT            = 0x10;        /* don't make missile explosions */
-	static const int Q_SURF_NOMARKS             = 0x20;        /* don't leave missile marks */
-	static const int Q_SURF_FLESH               = 0x40;        /* make flesh sounds and effects */
-	static const int Q_SURF_NODRAW              = 0x80;        /* don't generate a drawsurface at all */
-	static const int Q_SURF_HINT                = 0x100;       /* make a primary bsp splitter */
-	static const int Q_SURF_SKIP                = 0x200;       /* completely ignore, allowing non-closed brushes */
-	static const int Q_SURF_NOLIGHTMAP          = 0x400;       /* surface doesn't need a lightmap */
-	static const int Q_SURF_POINTLIGHT          = 0x800;       /* generate lighting info at vertexes */
-	static const int Q_SURF_METALSTEPS          = 0x1000;      /* clanking footsteps */
-	static const int Q_SURF_NOSTEPS             = 0x2000;      /* no footstep sounds */
-	static const int Q_SURF_NONSOLID            = 0x4000;      /* don't collide against curves with this set */
-	static const int Q_SURF_LIGHTFILTER         = 0x8000;      /* act as a light filter during q3map -light */
-	static const int Q_SURF_ALPHASHADOW         = 0x10000;     /* do per-pixel light shadow casting in q3map */
-	static const int Q_SURF_NODLIGHT            = 0x20000;     /* don't dlight even if solid (solid lava, skies) */
-	static const int Q_SURF_DUST                = 0x40000;     /* leave a dust trail when walking on this surface */
+	static const int Q_SURF_NOMARKS             = 0x8;         /* don't leave missile marks */
+	static const int Q_SURF_NODRAW              = 0x10;        /* don't generate a drawsurface at all */
+	static const int Q_SURF_HINT                = 0x20;        /* make a primary bsp splitter */
+	static const int Q_SURF_SKIP                = 0x40;        /* completely ignore, allowing non-closed brushes */
+	static const int Q_SURF_NOLIGHTMAP          = 0x80;        /* surface doesn't need a lightmap */
+	static const int Q_SURF_POINTLIGHT          = 0x100;       /* generate lighting info at vertexes */
+	static const int Q_SURF_NONSOLID            = 0x200;       /* don't collide against curves with this set */
+	static const int Q_SURF_LIGHTFILTER         = 0x400;       /* act as a light filter during q3map -light */
+	static const int Q_SURF_ALPHASHADOW         = 0x800;       /* do per-pixel light shadow casting in q3map */
 
 	/* ydnar flags */
 	static const int Q_SURF_VERTEXLIT           = ( Q_SURF_POINTLIGHT | Q_SURF_NOLIGHTMAP );
-	static const int Q_SURF_BEVELSMASK          = ( Q_SURF_NODAMAGE | Q_SURF_SLICK | Q_SURF_FLESH | Q_SURF_METALSTEPS | Q_SURF_NOSTEPS | Q_SURF_DUST );
+	static const int Q_SURF_BEVELSMASK          = ( Q_SURF_NODAMAGE | Q_SURF_SLICK );
 
 	game_default() : game_t{
 	"quake3",           /* -game x */
@@ -175,15 +168,8 @@ struct game_default : game_t
 
 		{ "slick",          0,                          0,                          Q_SURF_SLICK,               0,                          0,                          0 },
 
-		{ "noimpact",       0,                          0,                          Q_SURF_NOIMPACT,            0,                          0,                          0 },
 		{ "nomarks",        0,                          0,                          Q_SURF_NOMARKS,             0,                          C_NOMARKS,                  0 },
-		{ "ladder",         0,                          0,                          Q_SURF_LADDER,              0,                          0,                          0 },
 		{ "nodamage",       0,                          0,                          Q_SURF_NODAMAGE,            0,                          0,                          0 },
-		{ "metalsteps",     0,                          0,                          Q_SURF_METALSTEPS,          0,                          0,                          0 },
-		{ "flesh",          0,                          0,                          Q_SURF_FLESH,               0,                          0,                          0 },
-		{ "nosteps",        0,                          0,                          Q_SURF_NOSTEPS,             0,                          0,                          0 },
-		{ "nodlight",       0,                          0,                          Q_SURF_NODLIGHT,            0,                          0,                          0 },
-		{ "dust",           0,                          0,                          Q_SURF_DUST,                0,                          0,                          0 },
 	},
 
 	Q_SURF_BEVELSMASK
@@ -519,10 +505,6 @@ struct game_ef : game_default
 		gamePath = "baseef";
 		homeBasePath = ".ef";
 		magic = "elite";
-		/* overwrite "ladder" entry; note: magic number */
-		ENSURE( strEqual( surfaceParms[31].name, "ladder" ) );
-		surfaceParms[31] =
-		{ "ladder",         E_CONT_LADDER,              Q_CONT_SOLID,               Q_SURF_LADDER,              0,                          C_DETAIL | C_TRANSLUCENT,   C_SOLID };
 		surfaceParms.insert( surfaceParms.end(), {
 		{ "shotclip",       E_CONT_SHOTCLIP,            Q_CONT_SOLID,               0,                          0,                          C_DETAIL | C_TRANSLUCENT,   C_SOLID },
 		{ "forcefield",     0,                          0,                          E_SURF_FORCEFIELD,          0,                          0,                          0 },
