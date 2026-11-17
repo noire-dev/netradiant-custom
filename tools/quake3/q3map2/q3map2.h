@@ -921,7 +921,6 @@ struct mapDrawSurface_t_params
 
 	bool fur;                               /* ydnar: this is kind of a hack, but hey... */
 	bool skybox;                            /* ydnar: yet another fun hack */
-	bool skyboxGenerated = false;			/* noire: tag the skybox surfs */
 	bool backSide;                          /* ydnar: q3map_backShader support */
 
 	class mapDrawSurface_t *parent;        /* ydnar: for cloned (skybox) surfaces to share lighting data */
@@ -1778,7 +1777,6 @@ void                        SetDefaultAmbientColor( const Vector3& color );
 void                        SetSurfaceExtra( const mapDrawSurface_t& ds );
 void                        WriteSurfaceExtraFile( const char *path );
 void                        LoadSurfaceExtraFile( const char *path );
-void                        RemapSurfaceExtras( const std::vector<int>& remap );
 
 
 /* decals.c */

@@ -102,38 +102,6 @@ const surfaceExtra_t& GetSurfaceExtra( int num ){
 
 
 /*
-   RemapSurfaceExtras()
-   rebuilds the extras list after some drawsurfs have been stripped
-   (remap[ old ] = new surface number, or -1 for removed surfaces)
- */
-
-void RemapSurfaceExtras( const std::vector<int>& remap ){
-	std::vector<surfaceExtra_t> newExtras;
-	newExtras.reserve( remap.size() );
-
-	for ( size_t i = 0; i < remap.size(); ++i )
-	{
-		/* surface stripped, drop its extra */
-		if ( remap[ i ] < 0 ) {
-			continue;
-		}
-
-		surfaceExtra_t se = GetSurfaceExtra( i );
-
-		/* remap the parent link, or drop it if the parent has been stripped */
-		if ( se.parentSurfaceNum >= 0 && size_t( se.parentSurfaceNum ) < remap.size() ) {
-			se.parentSurfaceNum = remap[ se.parentSurfaceNum ];
-		}
-
-		newExtras.push_back( se );
-	}
-
-	surfaceExtras.swap( newExtras );
-}
-
-
-
-/*
    WriteSurfaceExtraFile()
    writes out a surface info file (<map>.srf)
  */

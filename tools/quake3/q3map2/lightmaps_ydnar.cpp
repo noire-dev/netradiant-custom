@@ -3007,7 +3007,6 @@ void StoreSurfaceLightmaps( bool fastAllocate, bool storeForReal ){
 				ds.firstVert = dsTemp.firstVert;
 				ds.firstIndex = dsTemp.firstIndex;
 				ds.lightmapVecs = dsTemp.lightmapVecs;
-				ds.shaderNum    = dsTemp.shaderNum;
 
 				/* set vertex data */
 				dv = &bspDrawVerts[ ds.firstVert ];

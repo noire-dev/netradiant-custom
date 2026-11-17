@@ -31,8 +31,6 @@
 /* dependencies */
 #include "q3map2.h"
 #include "bspfile_rbsp.h"
-#include "surface_extra.h"
-#include <map>
 #include <set>
 
 
@@ -1790,165 +1788,6 @@ static void SetupGrid( const Vector3& ambientColor ){
 
 
 /*
-	StripSkyboxOriginalSurfaces()
-	strips the original _skybox room surfaces from the bsp lumps
-
-	the SURF_SKYBOX clones made by MakeSkyboxSurface() (surface.cpp) copy their
-	lightmap data from the original surfaces in StoreSurfaceLightmaps(), so the
-	originals must survive until this point. afterwards they are not referenced
-	by any leaf the player can see and only bloat the bsp file, so remove them
-	along with their verts, indexes and leaf references
-*/
-
-static void StripSkyboxOriginalSurfaces(){
-	/* find the originals: every surface that is a lightmap parent of a skybox clone */
-	std::vector<bool> isOriginal( bspDrawSurfaces.size(), false );
-	std::map<int, int> cloneOf;
-	size_t numOriginals = 0;
-	for ( size_t i = 0; i < bspDrawSurfaces.size(); ++i )
-	{
-		const int parent = GetSurfaceExtra( i ).parentSurfaceNum;
-		if ( parent >= 0 && size_t( parent ) < bspDrawSurfaces.size() && !isOriginal[ parent ] ) {
-			isOriginal[ parent ] = true;
-			cloneOf[ parent ] = i;
-			numOriginals++;
-		}
-	}
-
-	/* nothing to strip */
-	if ( numOriginals == 0 ) {
-		return;
-	}
-
-	/* note it */
-	Sys_Printf( "--- StripSkyboxOriginalSurfaces ---\n" );
-
-	/* rebuild the drawsurfaces, verts and indexes without the originals */
-	std::vector<bspDrawSurface_t> newDrawSurfaces;
-	std::vector<bspDrawVert_t> newVerts;
-	std::vector<int> newIndexes;
-	std::vector<int> remap( bspDrawSurfaces.size(), -1 );
-
-	newDrawSurfaces.reserve( bspDrawSurfaces.size() - numOriginals );
-
-	/* map of shared index runs, so surfaces that share indexes keep sharing them */
-	std::map<std::pair<int, int>, int> indexRanges;
-
-	for ( size_t i = 0; i < bspDrawSurfaces.size(); ++i )
-	{
-		/* skip the original */
-		if ( isOriginal[ i ] ) {
-			continue;
-		}
-
-		bspDrawSurface_t ds = bspDrawSurfaces[ i ];
-
-		if ( ds.numVerts > 0 ) {
-			/* the old vert range must be captured before firstVert is overwritten,
-			   exactly like firstIndex is captured into 'range' below */
-			const int oldFirstVert = ds.firstVert;
-			ds.firstVert = newVerts.size();
-			newVerts.insert( newVerts.end(), bspDrawVerts.begin() + oldFirstVert, bspDrawVerts.begin() + oldFirstVert + ds.numVerts );
-		}
-		if ( ds.numIndexes > 0 ) {
-			/* drawindexes are deduplicated at emit time, so several surfaces can share a run */
-			const auto range = std::make_pair( ds.firstIndex, ds.numIndexes );
-			const auto it = indexRanges.find( range );
-			if ( it != indexRanges.end() ) {
-				ds.firstIndex = it->second;
-			}
-			else{
-				ds.firstIndex = newIndexes.size();
-				newIndexes.insert( newIndexes.end(), bspDrawIndexes.begin() + range.first, bspDrawIndexes.begin() + range.first + range.second );
-				indexRanges.emplace( range, ds.firstIndex );
-			}
-		}
-
-		remap[ i ] = newDrawSurfaces.size();
-		newDrawSurfaces.push_back( ds );
-	}
-
-	/* rebuild the leaf surface reference lists */
-	std::vector<int> newLeafSurfaces;
-	newLeafSurfaces.reserve( bspLeafSurfaces.size() );
-	for ( bspLeaf_t& leaf : bspLeafs )
-	{
-		const int firstSurface = leaf.firstBSPLeafSurface;
-		const int numSurfaces = leaf.numBSPLeafSurfaces;
-
-		leaf.firstBSPLeafSurface = newLeafSurfaces.size();
-		if ( numSurfaces > 0 ) {
-			for ( const int surfaceNum : Span( &bspLeafSurfaces[ firstSurface ], numSurfaces ) )
-			{
-				if ( remap[ surfaceNum ] >= 0 ) {
-					newLeafSurfaces.push_back( remap[ surfaceNum ] );
-				}
-			}
-		}
-		leaf.numBSPLeafSurfaces = newLeafSurfaces.size() - leaf.firstBSPLeafSurface;
-	}
-
-	/* fix up the model surface ranges (the kept surfaces stay contiguous) */
-	for ( bspModel_t& model : bspModels )
-	{
-		const int firstSurface = model.firstBSPSurface;
-		const int numSurfaces = model.numBSPSurfaces;
-		int firstKept = -1;
-		int numKept = 0;
-
-		for ( int i = 0; i < numSurfaces; ++i )
-		{
-			const int mapped = remap[ firstSurface + i ];
-			if ( mapped >= 0 ) {
-				if ( firstKept < 0 ) {
-					firstKept = mapped;
-				}
-				numKept++;
-			}
-		}
-
-		/* a model whose surfaces were all stripped (eg a func_static inside the
-		   _skybox room) must not keep a stale first surface pointing past the
-		   end of the new array */
-		model.firstBSPSurface = ( firstKept >= 0 )? firstKept : 0;
-		model.numBSPSurfaces = numKept;
-	}
-
-	/* fix up the brush side surface references (RBSP); sides of the stripped
-	   room brushes point at their clone, so the shader reference stays valid */
-	for ( bspBrushSide_t& side : bspBrushSides )
-	{
-		if ( side.surfaceNum < 0 || size_t( side.surfaceNum ) >= remap.size() ) {
-			continue;
-		}
-		if ( remap[ side.surfaceNum ] >= 0 ) {
-			side.surfaceNum = remap[ side.surfaceNum ];
-		}
-		else{
-			const auto it = cloneOf.find( side.surfaceNum );
-			side.surfaceNum = ( it != cloneOf.end() )? remap[ it->second ] : -1;
-		}
-	}
-
-	/* drop the stale parent links and align the extras with the new surface numbers */
-	RemapSurfaceExtras( remap );
-
-	/* swap in the stripped lumps */
-	bspDrawSurfaces.swap( newDrawSurfaces );
-	bspDrawVerts.swap( newVerts );
-	bspDrawIndexes.swap( newIndexes );
-	bspLeafSurfaces.swap( newLeafSurfaces );
-
-	Sys_Printf( "%9d _skybox original surfaces stripped\n", int( numOriginals ) );
-
-	/* rewrite the surface file, so relighting the stripped bsp won't copy garbage lightmaps */
-	WriteSurfaceExtraFile( StringStream( PathExtensionless( source ) ).c_str() );
-	Sys_Warning( "the _skybox originals have been stripped from the bsp; rebuild the map (-bsp) if you need to relight it with the original skybox lighting\n" );
-}
-
-
-
-/*
 	Handles writing optional hacks after -light and each -bounce pass
 */
 
@@ -2238,8 +2077,6 @@ static void LightWorld( bool fastAllocate, bool bounceStore ){
 		if ( lights.empty() ) {
 			Sys_Printf( "No diffuse light to calculate, ending radiosity.\n" );
 			if( bounceStore ){ // already stored, just quit
-				StripSkyboxOriginalSurfaces();
-				WriteBSPFileAfterLight( source );
 				return;
 			}
 			break; // break to StoreSurfaceLightmaps
@@ -2288,9 +2125,6 @@ static void LightWorld( bool fastAllocate, bool bounceStore ){
 
 	/* ydnar: store off lightmaps */
 	StoreSurfaceLightmaps( fastAllocate, true );
-
-	/* the clones carry their lightmap data now, so the _skybox originals can go */
-	StripSkyboxOriginalSurfaces();
 
 	/* write out the bsp */
 	UnparseEntities();
